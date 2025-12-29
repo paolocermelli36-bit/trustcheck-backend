@@ -1,0 +1,27 @@
+{
+  "en": [
+    "scam","fraud","fraudulent","ponzi","pyramid scheme",
+    "money laundering","aml","terrorist financing",
+    "bribery","corruption","kickback","embezzlement","misappropriation","forgery","identity theft","wire fraud","securities fraud","insider trading",
+    "arrested","arrest","indicted","indictment","charged","criminal charges","warrant","wanted","convicted","conviction","sentenced","plea","guilty",
+    "lawsuit","sued","litigation","class action","court","judgment","injunction","settlement",
+    "sanction","sanctions","sanctioned","ofac","sdn","watchlist","adverse media","blacklist","world-check","lexisnexis","complyadvantage",
+    "cease and desist","enforcement action","consent order","regulator","fined","penalty",
+    "license revoked","license suspended","authorization withdrawn","banned",
+    "bankruptcy","insolvency","liquidation","receivership","shutdown","collapsed","default",
+    "data breach","breach","leak","hacked","ransomware","phishing",
+    "misconduct","whistleblower","harassment","discrimination","mis-selling"
+  ],
+  "it": [
+    "truffa","truffe","frode","truffaldino","schema ponzi","piramidale",
+    "riciclaggio","antiriciclaggio","finanziamento del terrorismo",
+    "corruzione","tangente","peculato","appropriazione indebita","falso","contraffazione","evasione","evasione fiscale","frode iva","insider trading",
+    "arresto","arrestato","indagato","inchiesta","indagine","imputato","rinvio a giudizio","condanna","condannato","sentenza","mandato",
+    "causa","contenzioso","querela","tribunale","processo","risarcimento","sequestro","confisca",
+    "sanzione","sanzionato","multa","provvedimento","diffida","ordine di cessazione","enforcement","regolatore","autorità",
+    "licenza revocata","licenza sospesa","autorizzazione revocata","divieto",
+    "fallimento","bancarotta","liquidazione","insolvenza","concordato","commissariamento",
+    "violazione dati","data breach","fuga di dati","hackerato","ransomware","phishing",
+    "blacklist","lista nera","world-check","lexisnexis","complyadvantage","watchlist","adverse media"
+  ]
+}

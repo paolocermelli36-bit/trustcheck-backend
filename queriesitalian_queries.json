@@ -1,0 +1,10 @@
+{
+  "patterns": [
+    "{name}",
+    "\"{name}\" (autorità OR regolatore OR vigilanza OR provvedimento OR sanzione OR multa OR diffida)",
+    "\"{name}\" (truffa OR frode OR riciclaggio OR antiriciclaggio OR corruzione OR tangente OR \"appropriazione indebita\")",
+    "\"{name}\" (causa OR contenzioso OR tribunale OR processo OR querela OR condanna OR sentenza OR \"rinvio a giudizio\")",
+    "\"{name}\" (\"licenza revocata\" OR \"licenza sospesa\" OR \"divieto\" OR \"ordine di cessazione\" OR \"autorizzazione revocata\")",
+    "\"{name}\" (\"violazione dati\" OR \"data breach\" OR ransomware OR hackerato OR \"fuga di dati\" OR fallimento OR bancarotta OR liquidazione)"
+  ]
+}

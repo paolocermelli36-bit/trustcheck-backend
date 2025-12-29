@@ -1,79 +1,73 @@
+import json
 import re
 from dataclasses import dataclass
-from typing import List
-
+from pathlib import Path
+from typing import List, Dict, Tuple
 
 @dataclass(frozen=True)
 class KeywordHit:
     keyword: str
-    where: str  # title|snippet|link
+    where: str  # title|snippet
 
+BASE_DIR = Path(__file__).resolve().parent
+NEG_FILE = BASE_DIR / "queries" / "negative_queries.json"
 
-# Exclusions to reduce false positives (cosmetics, generic language)
 EXCLUSION_PATTERNS = [
     re.compile(r"\bfine\s+line(s)?\b", re.IGNORECASE),
     re.compile(r"\bwrinkle(s)?\b", re.IGNORECASE),
     re.compile(r"\bskin\s+care\b", re.IGNORECASE),
 ]
 
-# Keywords (keep them tight; use word boundaries)
-NEGATIVE_PATTERNS = [
-    # Regulatory / enforcement
-    (r"\bsanction(s)?\b", "sanction"),
-    (r"\bfine(s)?\b", "fine"),
-    (r"\bpenalt(y|ies)\b", "penalty"),
-    (r"\bcease\s+and\s+desist\b", "cease and desist"),
-    (r"\benforcement\b", "enforcement"),
-    (r"\bregulator(y)?\b", "regulatory"),
-
-    # Legal / dispute
-    (r"\blawsuit(s)?\b", "lawsuit"),
-    (r"\bclass\s+action\b", "class action"),
-    (r"\ballegation(s)?\b", "allegations"),
-    (r"\bfraud\b", "fraud"),
-    (r"\bscam(s)?\b", "scam"),
-    (r"\bindictment(s)?\b", "indictment"),
-    (r"\bcharged\b", "charged"),
-    (r"\barrest(ed)?\b", "arrest"),
-
-    # Business distress
-    (r"\bbankrupt(cy|cies)\b", "bankruptcy"),
-    (r"\binsolvenc(y|ies)\b", "insolvency"),
-    (r"\bshutdown\b", "shutdown"),
-    (r"\bliquidation\b", "liquidation"),
-    (r"\badministration\b", "administration"),
-]
-
-COMPILED = [(re.compile(p, re.IGNORECASE), label) for p, label in NEGATIVE_PATTERNS]
-
-
 def _is_excluded(text: str) -> bool:
-    return any(rx.search(text) for rx in EXCLUSION_PATTERNS)
+    return any(rx.search(text or "") for rx in EXCLUSION_PATTERNS)
 
+def _compile_terms(terms: List[str]) -> List[Tuple[re.Pattern, str]]:
+    compiled: List[Tuple[re.Pattern, str]] = []
+    for term in terms:
+        t = (term or "").strip()
+        if not t:
+            continue
+        if " " in t:
+            pattern = re.escape(t).replace("\\ ", r"\s+")
+        else:
+            pattern = r"\b" + re.escape(t) + r"\b"
+        compiled.append((re.compile(pattern, re.IGNORECASE), t))
+    return compiled
 
-def find_negative_hits(title: str, snippet: str, link: str) -> List[KeywordHit]:
+def _load_negative_terms() -> Dict[str, List[str]]:
+    if not NEG_FILE.exists():
+        raise FileNotFoundError(f"Missing negative terms file: {NEG_FILE}")
+    data = json.loads(NEG_FILE.read_text(encoding="utf-8"))
+    out: Dict[str, List[str]] = {}
+    for k in ("en", "it"):
+        v = data.get(k, [])
+        if isinstance(v, list):
+            out[k] = [str(x) for x in v]
+    if not out:
+        raise ValueError("negative_queries.json has no usable terms.")
+    return out
+
+_TERMS = _load_negative_terms()
+_COMPILED = {lang: _compile_terms(terms) for lang, terms in _TERMS.items()}
+
+def find_negative_hits(title: str, snippet: str, language: str = "en") -> List[KeywordHit]:
+    lang = "it" if (language or "").lower().startswith("it") else "en"
+    compiled = _COMPILED.get(lang) or _COMPILED.get("en") or []
+
+    t = title or ""
+    s = snippet or ""
+
+    excluded_title = _is_excluded(t)
+    excluded_snip = _is_excluded(s)
+
     hits: List[KeywordHit] = []
-    title = title or ""
-    snippet = snippet or ""
-    link = link or ""
-
-    blob_title = title.strip()
-    blob_snip = snippet.strip()
-
-    # exclusions apply only to generic snippets
-    if _is_excluded(blob_snip):
-        # still allow strong words like fraud/arrest if present
-        # but block "fine" specifically from cosmetics contexts
-        pass
-
-    for rx, label in COMPILED:
-        if rx.search(blob_title):
-            if label == "fine" and _is_excluded(blob_title):
+    for rx, label in compiled:
+        if rx.search(t):
+            if excluded_title and label == "fine":
                 continue
             hits.append(KeywordHit(keyword=label, where="title"))
-        if rx.search(blob_snip):
-            if label == "fine" and _is_excluded(blob_snip):
+        if rx.search(s):
+            if excluded_snip and label == "fine":
                 continue
             hits.append(KeywordHit(keyword=label, where="snippet"))
-
     return hits

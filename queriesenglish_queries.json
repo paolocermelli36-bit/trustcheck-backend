@@ -1,0 +1,10 @@
+{
+  "patterns": [
+    "{name}",
+    "\"{name}\" (regulator OR authority OR enforcement OR fine OR penalty OR sanction OR supervisory)",
+    "\"{name}\" (fraud OR scam OR \"money laundering\" OR AML OR bribery OR corruption OR embezzlement OR forgery)",
+    "\"{name}\" (lawsuit OR litigation OR \"class action\" OR indicted OR charged OR conviction OR sentenced OR judgment)",
+    "\"{name}\" (\"license revoked\" OR \"license suspended\" OR ban OR \"cease and desist\" OR \"authorization withdrawn\")",
+    "\"{name}\" (\"data breach\" OR ransomware OR leak OR \"security incident\" OR hacked OR shutdown OR bankruptcy OR insolvency)"
+  ]
+}

@@ -1,38 +1,31 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from config import DEFAULT_MAX_RESULTS, RATE_LIMIT_RPM
+from config import DEFAULT_MAX_RESULTS, RATE_LIMIT_RPM, MAX_RESULTS_PER_QUERY
 from search_engine import google_search, GoogleSearchError
 from reputation_engine import analyze
+from query_builder import build_queries
 
 import time
 
 app = FastAPI(title="TrustCheck Backend")
-
 _last_call_ts = 0.0
-
 
 class AnalyzeRequest(BaseModel):
     query: str
-    maxResults: int | None = None
-
+    language: str | None = None
 
 def _rate_limit():
     global _last_call_ts
-    if RATE_LIMIT_RPM <= 0:
-        return
-    min_interval = 60.0 / float(RATE_LIMIT_RPM)
     now = time.time()
-    wait = (_last_call_ts + min_interval) - now
-    if wait > 0:
-        time.sleep(wait)
+    min_interval = 60.0 / max(1, RATE_LIMIT_RPM)
+    if now - _last_call_ts < min_interval:
+        time.sleep(min_interval - (now - _last_call_ts))
     _last_call_ts = time.time()
 
-
-@app.get("/health")
-def health():
-    return {"ok": True}
-
+@app.get("/")
+def root():
+    return {"status":"ok","service":"TrustCheck Turbo Engine 2.1"}
 
 @app.post("/analyze")
 def analyze_endpoint(req: AnalyzeRequest):
@@ -40,28 +33,53 @@ def analyze_endpoint(req: AnalyzeRequest):
     if not q:
         raise HTTPException(status_code=400, detail="Missing query")
 
-    max_results = int(req.maxResults or DEFAULT_MAX_RESULTS)
-    max_results = max(10, min(100, max_results))
+    lang = (req.language or "en").strip().lower()
+    lang = "it" if lang.startswith("it") else "en"
 
-    _rate_limit()
+    max_results = max(10, min(int(DEFAULT_MAX_RESULTS), 100))
+    subqueries = build_queries(q, lang) or [{"id": "Q1", "q": q}]
 
-    # fetch up to max_results (in batches of 10)
-    collected = []
-    start = 1
-    while len(collected) < max_results:
-        try:
-            data = google_search(q, start_index=start, num_results=10)
-        except GoogleSearchError as e:
-            raise HTTPException(status_code=502, detail=str(e))
+    by_link = {}  # link -> item (with _qhits)
 
-        batch = data.get("items", []) or []
-        if not batch:
-            break
-        collected.extend(batch)
-
-        start += 10
-        if start > 100:  # API hard cap for pagination
+    for sq in subqueries:
+        if len(by_link) >= max_results:
             break
 
-    google_results = {"items": collected[:max_results]}
-    return analyze(q, google_results)
+        per_q_cap = max(10, min(int(MAX_RESULTS_PER_QUERY), 50))
+        start = 1
+        fetched = 0
+
+        while fetched < per_q_cap and len(by_link) < max_results:
+            _rate_limit()
+            try:
+                data = google_search(sq["q"], start_index=start, num_results=10)
+            except GoogleSearchError as e:
+                raise HTTPException(status_code=502, detail=str(e))
+
+            batch = data.get("items", []) or []
+            if not batch:
+                break
+
+            for item in batch:
+                link = (item.get("link") or "").strip()
+                if not link:
+                    continue
+
+                if link in by_link:
+                    by_link[link].setdefault("_qhits", [])
+                    by_link[link]["_qhits"].append(sq["id"])
+                    continue
+
+                item["_qhits"] = [sq["id"]]
+                by_link[link] = item
+
+                if len(by_link) >= max_results:
+                    break
+
+            fetched += len(batch)
+            start += 10
+            if start > 100:
+                break
+
+    collected = list(by_link.values())[:max_results]
+    return analyze(q, collected, language=lang)
