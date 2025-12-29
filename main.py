@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 from config import DEFAULT_MAX_RESULTS, RATE_LIMIT_RPM, MAX_RESULTS_PER_QUERY
 from search_engine import google_search, GoogleSearchError
@@ -9,6 +10,15 @@ from query_builder import build_queries
 import time
 
 app = FastAPI(title="TrustCheck Backend")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 _last_call_ts = 0.0
 
 class AnalyzeRequest(BaseModel):
